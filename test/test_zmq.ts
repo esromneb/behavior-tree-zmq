@@ -11,6 +11,22 @@ import testData from './data/data'
 
 // console.log(t05);
 
+function _catbuf(resultConstructor, ...arrays) {
+    let totalLength = 0;
+    for (const arr of arrays) {
+        totalLength += arr.length;
+    }
+    const result = new resultConstructor(totalLength);
+    let offset = 0;
+    for (const arr of arrays) {
+        result.set(arr, offset);
+        offset += arr.length;
+    }
+    return result;
+}
+
+
+
 
 
 export interface IFunctionWriterCb {
@@ -34,7 +50,7 @@ export interface ABTLogger {
 }
 
 export interface ABTZmqLogger {
-  dataCallback(buf: Uint8Array): void;
+  dataCallback(buf: Uint8Array, flushBuf: number[][]): void;
   run(): Promise<void>;
 }
 
@@ -132,7 +148,7 @@ class MockAsyncBehaviorTree {
     this.logger = l;
     this.zmq = z;
 
-    this.logger.writeToCallback(z.dataCallback.bind(z));
+    this.logger.writeToCallback(this.gotTransition.bind(this));
 
 
     await this.logger.start();
@@ -140,6 +156,41 @@ class MockAsyncBehaviorTree {
     this.logger.registerConditionNodes(this.getConditionNodes());
     this.logger.parseXML(this.rawXml);
   }
+
+  transitions: number = 0;
+
+
+
+  // transition 0 is the full header
+  // transition 1 is a specific transition from a->b
+  // at any point after 0 we can add a "flush".
+  gotTransition(buf: Uint8Array) {
+
+    if( this.transitions === 1 ) {
+
+      let flushList = [
+      [1,0],
+      [2,2],
+      [3,3],
+      [4,3],
+      [5,2],
+      [6,2],
+      [7,2],
+      [8,3],
+      [9,1],
+      // [9,2],
+      ];
+
+      this.zmq.dataCallback(buf, flushList);
+
+    } else {
+      this.zmq.dataCallback(buf, undefined);
+    }
+
+    this.transitions++;
+
+  }
+
 
   async execute(): Promise<void> {
     // values here do not matter

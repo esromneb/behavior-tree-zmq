@@ -32,7 +32,11 @@ class BehaviorTreeZmq {
 
   firstCallback: boolean = true;
 
-  dataCallback(buf: Uint8Array): void {
+  // transition 0 is the full header
+  // transition 1 is a specific transition from a->b
+  // at any point after 0 we can add a "flush".
+
+  dataCallback(buf: Uint8Array, flushList?: number[][]): void {
 
     console.log(this.firstCallback, buf);
 
@@ -40,19 +44,30 @@ class BehaviorTreeZmq {
     if( this.firstCallback ) {
       this.firstMessage = buf;
       this.firstCallback = false;
+      if( flushList != undefined ) {
+        throw new Error(`dataCallback cannot have a second argument on the first call`);
+        
+      }
       return;
     }
 
     // at this point we always send via the docker
 
-    // this is a Promise
-    // we fire and forget so that this function
-    // doesn't need to be async
-    this.packAndSend(buf);
+    if( flushList == undefined ) {
 
-
+      // this is a Promise
+      // we fire and forget so that this function
+      // doesn't need to be async
+      this.packAndSend(buf);
+    } else {
+      this.packAndSendAndFlush(buf, flushList);
+    }
 
   }
+
+
+
+
 
   // packs and sends one buf
   async packAndSend(buf: Uint8Array): Promise<void> {
@@ -63,15 +78,88 @@ class BehaviorTreeZmq {
 
     // FIXME these only work for values less than 256
 
-    let headerLen = 0;
-    let header = Uint8Array.of(headerLen,0,0,0);
+    // let headerLen = 0;
+    // header is 0 length
+    let header = Uint8Array.of(0,0,0,0);
 
     let numTransitions = 1;
-    let transitions = Uint8Array.of(numTransitions,0,0,0);
+    let transitions = Uint8Array.of(...this.buildUint32(numTransitions));
 
     let final = _catbuf(Uint8Array, header, transitions, buf);
 
     await this.sendData(final);
+  }
+
+
+
+  // packs and sends one buf
+  async packAndSendAndFlush(buf: Uint8Array, flushList: number[][]): Promise<void> {
+
+    if( (buf.length % 12) !== 0) {
+      throw new Error(`packAndSend length must be multiple of 12:  ${buf.length} is wrong`);
+    }
+
+
+
+    // FIXME these only work for values less than 256
+
+    let headerLenBuf = this.getFlushHeaderLen(flushList);
+    let header = this.getFlushHeader(flushList);
+
+    console.log("header", header);
+
+
+    let numTransitions = 1;
+    let transitions = Uint8Array.of(numTransitions,0,0,0);
+
+    let final = _catbuf(Uint8Array, headerLenBuf, header, transitions, buf);
+
+    await this.sendData(final);
+  }
+
+
+  getFlushHeaderLen(flushList: number[][]) {
+    let headerLen = flushList.length*3;
+    let headerLenBuf = Uint8Array.of(...this.buildUint32(headerLen));
+    return headerLenBuf;
+  }
+
+
+  getFlushHeader(flushList: number[][]): Uint8Array {
+
+    let ret = [];
+
+    for(let f of flushList) {
+      // @ts-ignore
+      ret.push(this.getFlushStatus(...f));
+    }
+
+    return _catbuf(Uint8Array, ...ret);
+  }
+
+  buildUint32(x: number): number[] {
+    let a = (x >> 24) & 0xff;
+    let b = (x >> 16) & 0xff;
+    let c = (x >>  8) & 0xff;
+    let d = (x)       & 0xff
+    return [d,c,b,a];
+  }
+
+  buildUint16(x: number): number[] {
+    let a = (x >> 8) & 0xff;
+    let b = (x)      & 0xff;
+    console.log("x",x,a,b);
+    return [b,a];
+  }
+
+  getFlushStatus(id: number, status: number): Uint8Array {
+
+    let masked = status & 0xff;
+    let ret = Uint8Array.of(...this.buildUint16(id),masked);
+
+    console.log("flushstatus",id,status,ret);
+
+    return ret;
   }
 
 
