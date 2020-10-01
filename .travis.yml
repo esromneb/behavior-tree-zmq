@@ -10,4 +10,8 @@ sudo: required
 services:
   - zmq
   - ubuntu-toolchain-r-test
+  - g++-7
 
+env:
+  - CC=gcc-7
+  - CXX=g++-7
