@@ -1,4 +1,7 @@
-const zmq = require("zeromq")
+const zmq = require("zeromq");
+
+export type Vec2 = [number,number];
+export type Vec4 = [number,number,number,number];
 
 
 function _catbuf(resultConstructor, ...arrays) {
@@ -36,7 +39,7 @@ class BehaviorTreeZmq {
   // transition 1 is a specific transition from a->b
   // at any point after 0 we can add a "flush".
 
-  dataCallback(buf: Uint8Array, flushList?: number[][]): void {
+  dataCallback(buf: Uint8Array, flushList?: Vec2[]): void {
 
     console.log(this.firstCallback, buf);
 
@@ -93,7 +96,7 @@ class BehaviorTreeZmq {
 
 
   // packs and sends one buf
-  async packAndSendAndFlush(buf: Uint8Array, flushList: number[][]): Promise<void> {
+  async packAndSendAndFlush(buf: Uint8Array, flushList: Vec2[]): Promise<void> {
 
     if( (buf.length % 12) !== 0) {
       throw new Error(`packAndSend length must be multiple of 12:  ${buf.length} is wrong`);
@@ -106,7 +109,7 @@ class BehaviorTreeZmq {
     let headerLenBuf = this.getFlushHeaderLen(flushList);
     let header = this.getFlushHeader(flushList);
 
-    console.log("header", header);
+    // console.log("header", header);
 
 
     let numTransitions = 1;
@@ -125,19 +128,18 @@ class BehaviorTreeZmq {
   }
 
 
-  getFlushHeader(flushList: number[][]): Uint8Array {
+  getFlushHeader(flushList: Vec2[]): Uint8Array {
 
     let ret = [];
 
     for(let f of flushList) {
-      // @ts-ignore
       ret.push(this.getFlushStatus(...f));
     }
 
     return _catbuf(Uint8Array, ...ret);
   }
 
-  buildUint32(x: number): number[] {
+  buildUint32(x: number): Vec4 {
     let a = (x >> 24) & 0xff;
     let b = (x >> 16) & 0xff;
     let c = (x >>  8) & 0xff;
@@ -145,10 +147,10 @@ class BehaviorTreeZmq {
     return [d,c,b,a];
   }
 
-  buildUint16(x: number): number[] {
+  buildUint16(x: number): Vec2 {
     let a = (x >> 8) & 0xff;
     let b = (x)      & 0xff;
-    console.log("x",x,a,b);
+    // console.log("x",x,a,b);
     return [b,a];
   }
 
