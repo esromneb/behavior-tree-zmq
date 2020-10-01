@@ -7,11 +7,18 @@ node_js:
 
 sudo: required
 
-- os: linux
-  addons:
-    apt:
-      sources:
-        - ubuntu-toolchain-r-test
+# - os: linux
+#   addons:
+#     apt:
+#       sources:
+#         - ubuntu-toolchain-r-test
+
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+    packages:
+      - g++-7
 
 services:
   - zmq
