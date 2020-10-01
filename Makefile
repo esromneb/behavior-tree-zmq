@@ -37,6 +37,5 @@ cleandist:
 
 
 clean:
-	rm -rf out/*
 	rm -rf dist/*
 

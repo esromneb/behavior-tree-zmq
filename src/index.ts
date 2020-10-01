@@ -30,6 +30,8 @@ class BehaviorTreeZmq {
     }
   }
 
+  logSockBind: boolean = true;
+
   repSock: any;
   pubSock: any;
 
@@ -159,7 +161,7 @@ class BehaviorTreeZmq {
     let masked = status & 0xff;
     let ret = Uint8Array.of(...this.buildUint16(id),masked);
 
-    console.log("flushstatus",id,status,ret);
+    // console.log("flushstatus",id,status,ret);
 
     return ret;
   }
@@ -185,13 +187,15 @@ class BehaviorTreeZmq {
     let fullPath = `tcp://${this.options.repAddress}`;
 
     await repSock.bind(fullPath);
-    console.log(`Reply bound to port ${fullPath}`);
+    if( this.logSockBind ) {
+      console.log(`Reply bound to port ${fullPath}`);
+    }
 
     setTimeout(async ()=>{
 
       for await (const [msg] of repSock) {
-        console.log("got msg");
-        console.log(msg);
+        // console.log("got msg");
+        // console.log(msg);
         await repSock.send(this.firstMessage);
       }
     }, 0);
@@ -207,7 +211,9 @@ class BehaviorTreeZmq {
     let fullPath = `tcp://${this.options.pubAddress}`;
 
     await pubSock.bind(fullPath);
-    console.log(`Publisher bound to port ${fullPath}`);
+    if( this.logSockBind ) {
+      console.log(`Publisher bound to port ${fullPath}`);
+    }
   }
 
 
