@@ -11,7 +11,7 @@
     "/dist"
   ],
   "scripts": {
-    "test": "jest --no-cache",
+    "test": "jest --no-cache --coverage",
     "jestw": "jest --watch --runInBand --detectOpenHandles",
     "jestc": "jest --clearCache",
     "build": "tsc",

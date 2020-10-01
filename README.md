@@ -20,6 +20,7 @@ Two arguments, a buffer and a flushList.
 * Publish with:
 ```bash
 nvm use 14
+make clean
 make wasm build
 npm publish
 ```

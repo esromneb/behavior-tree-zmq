@@ -202,12 +202,10 @@ class MockAsyncBehaviorTree {
 
 
 
-const runServerFor = 990000
+const runServerFor = 990000;
+// jest.setTimeout(runServerFor);
 
-
-jest.setTimeout(runServerFor);
-
-test("test all together with zmq", async function(done) {
+test.skip("test all together with zmq", async function(done) {
 
 
   // debugger;
@@ -289,12 +287,56 @@ test("test all together with zmq", async function(done) {
 });
 
 
+function checkTypedArrayType(someTypedArray) {
+  const typedArrayTypes = [
+    Int8Array,
+    Uint8Array,
+    Uint8ClampedArray,
+    Int16Array,
+    Uint16Array,
+    Int32Array,
+    Uint32Array,
+    Float32Array,
+    Float64Array,
+    BigInt64Array,
+    BigUint64Array
+  ];
+  const checked = typedArrayTypes.filter(ta => someTypedArray.constructor === ta);
+  return checked.length && checked[0].name || null;
+}
 
 
 
 
+test("test helpers", async function(done) {
+  let dut = new BehaviorTreeZmq();
 
-test.skip("test saved data", async function(done) {
+
+  let got0 = Uint8Array.of(...dut.buildUint32(200));
+  expect(checkTypedArrayType(got0)).toBe('Uint8Array');
+  let expected0 = Uint8Array.of(200,0,0,0);
+  expect(Buffer.compare(got0,expected0)).toBe(0);
+
+
+  let got1 = Uint8Array.of(...dut.buildUint32(200<<16));
+  expect(checkTypedArrayType(got1)).toBe('Uint8Array');
+  let expected1 = Uint8Array.of(0,0,200,0);
+  expect(Buffer.compare(got1,expected1)).toBe(0);
+
+
+  let got2 = Uint8Array.of(...dut.buildUint16(23752));
+  expect(checkTypedArrayType(got2)).toBe('Uint8Array');
+  let expected2 = Uint8Array.of(0xc8,0x5c);
+  expect(Buffer.compare(got2,expected2)).toBe(0);
+
+
+
+  done();
+
+});
+
+
+test("test saved data", async function(done) {
 
   let a = testData.getTestTree5Header();
 
@@ -302,9 +344,12 @@ test.skip("test saved data", async function(done) {
 
   let b = testData.getTestTree5Transitions();
 
-  for(let c of b) {
-    console.log(c);
-  }
+  // for(let c of b) {
+  //   console.log(c);
+  // }
+
+  expect(a).not.toBeNull();
+  expect(b).not.toBeNull();
 
   done();
 });
