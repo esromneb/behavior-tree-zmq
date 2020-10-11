@@ -79,7 +79,7 @@ class BehaviorTreeZmq {
   mutexBusy: boolean = false;
   queue: Uint8Array[] = [];
 
-  queueData(buf: Uint8Array) {
+  queueData(buf: Uint8Array): void {
     this.queue.push(buf);
   }
 
