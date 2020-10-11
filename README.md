@@ -14,13 +14,3 @@ Two arguments, a buffer and a flushList.
   * This first call is the full header
 * The second call can have either the buffer, or the buffer and flushList
 * The buffer is always data output from `AsyncBehaviorTree`
-
-
-# Publish notes to myself
-* Publish with:
-```bash
-nvm use 14
-make clean
-make wasm build
-npm publish
-```

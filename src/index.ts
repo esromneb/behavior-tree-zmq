@@ -24,13 +24,15 @@ function _catbuf(resultConstructor, ...arrays) {
 
 class BehaviorTreeZmq {
   logStartup: boolean = false;
+  logCallbacks: boolean = false;
+  logSockBind: boolean = true;
+  logQueueDrain: boolean = false;
   constructor(public options = {repAddress:'127.0.0.1:1667', pubAddress:'127.0.0.1:1666'}) {
     if( this.logStartup ) {
       console.log('ctons');
     }
   }
 
-  logSockBind: boolean = true;
 
   repSock: any;
   pubSock: any;
@@ -43,7 +45,9 @@ class BehaviorTreeZmq {
 
   dataCallback(buf: Uint8Array, flushList?: Vec2[]): void {
 
-    console.log(this.firstCallback, buf);
+    if( this.logCallbacks ) {
+      console.log(this.firstCallback, buf);
+    }
 
     // save the header to a variable and send nothing over a socket
     if( this.firstCallback ) {
@@ -71,6 +75,23 @@ class BehaviorTreeZmq {
   }
 
 
+  // acts like a mutex
+  mutexBusy: boolean = false;
+  queue: Uint8Array[] = [];
+
+  queueData(buf: Uint8Array) {
+    this.queue.push(buf);
+  }
+
+  // you must set mutexBusy outside of this function
+  async drainQueue(): Promise<void> {
+    if( this.logQueueDrain && this.queue.length !== 0) {
+      console.log(`About to drain ${this.queue.length} messages`);
+    }
+    while(this.queue.length) {
+      await this.sendData(this.queue.shift());
+    }
+  }
 
 
 
@@ -90,9 +111,23 @@ class BehaviorTreeZmq {
     let numTransitions = 1;
     let transitions = Uint8Array.of(...this.buildUint32(numTransitions));
 
-    let final = _catbuf(Uint8Array, header, transitions, buf);
+    let final: Uint8Array = _catbuf(Uint8Array, header, transitions, buf);
 
+    // if this is true, it means another "thread" has called
+    // send data below, but hasn't returned
+    // in this situation we queue the data and then bail
+    if( this.mutexBusy ) {
+      this.queueData(buf);
+      return;
+    }
+
+    this.mutexBusy = true;
     await this.sendData(final);
+    await this.drainQueue();
+    this.mutexBusy = false;
+
+
+
   }
 
 
